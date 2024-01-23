@@ -1,43 +1,35 @@
 ﻿namespace NLog.Targets.ElasticSearch.Tests;
 
-public class TestOutputTextWriter : TextWriter
+public class TestOutputTextWriter(ITestOutputHelper testOutputHelper) : TextWriter
 {
-    private StringBuilder stringBuilder;
-    private readonly ITestOutputHelper testOutputHelper;
-
-    public TestOutputTextWriter(ITestOutputHelper testOutputHelper)
-    {
-        this.stringBuilder = new StringBuilder();
-        this.testOutputHelper = testOutputHelper;
-    }
+    private StringBuilder stringBuilder = new();
 
     public override Encoding Encoding => Encoding.Unicode;
 
     public override void Write(char value)
     {
-        this.stringBuilder.Append(value);
+        stringBuilder.Append(value);
     }
 
-    public override void WriteLine(string value)
+    public override void WriteLine(string? value)
     {
-        this.stringBuilder.Append(value);
-
-        this.Flush();
+        stringBuilder.Append(value);
+        Flush();
     }
 
     public override void Flush()
     {
-        var sb = this.stringBuilder;
+        StringBuilder sb = stringBuilder;
         if (sb.Length > 0)
         {
-            this.stringBuilder = new StringBuilder();
-            this.testOutputHelper.WriteLine(sb.ToString());
+            stringBuilder = new StringBuilder();
+            testOutputHelper.WriteLine(sb.ToString());
         }
     }
 
     protected override void Dispose(bool disposing)
     {
-        this.Flush();
+        Flush();
         base.Dispose(disposing);
     }
 }
