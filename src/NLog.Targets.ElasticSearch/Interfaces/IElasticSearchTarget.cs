@@ -1,4 +1,4 @@
-﻿namespace NLog.Targets.ElasticSearch;
+﻿namespace NLog.Targets.ElasticSearch.Interfaces;
 
 /// <summary>
 /// Interface for NLog Target for writing to ElasticSearch
@@ -110,7 +110,7 @@ public interface IElasticSearchTarget
     /// <summary>
     /// Gets or sets a list of additional fields to add to the elasticsearch document.
     /// </summary>
-    IList<Field> Fields { get; set; }
+    IList<Models.Field> Fields { get; set; }
 
     /// <summary>
     /// Gets or sets an alertnative serializer for the elasticsearch client to use.

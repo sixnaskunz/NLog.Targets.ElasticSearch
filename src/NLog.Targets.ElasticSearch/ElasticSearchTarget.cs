@@ -169,8 +169,8 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     /// <summary>
     /// Gets or sets a list of additional fields to add to the elasticsearch document.
     /// </summary>
-    [ArrayParameter(typeof(Field), "field")]
-    public IList<Field> Fields { get; set; } = new List<Field>();
+    [ArrayParameter(typeof(Models.Field), "field")]
+    public IList<Models.Field> Fields { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a list of object types and their override of JsonConverter
@@ -474,7 +474,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
             document.Add("message", RenderLogEvent(Layout, logEvent));
         }
 
-        foreach (Field field in Fields)
+        foreach (Models.Field field in Fields)
         {
             string renderedField = RenderLogEvent(field.Layout, logEvent);
 

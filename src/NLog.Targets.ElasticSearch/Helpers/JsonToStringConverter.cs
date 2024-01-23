@@ -1,4 +1,4 @@
-﻿namespace NLog.Targets.ElasticSearch;
+﻿namespace NLog.Targets.ElasticSearch.Helpers;
 
 internal sealed class JsonToStringConverter(Type type) : JsonConverter
 {

@@ -1,4 +1,4 @@
-﻿namespace NLog.Targets.ElasticSearch;
+﻿namespace NLog.Targets.ElasticSearch.Models;
 
 /// <summary>
 /// Additional field details
@@ -16,7 +16,7 @@ public class Field
     /// Value with NLog <see cref="NLog.Layouts.Layout"/> rendering support
     /// </summary>
     [RequiredParameter]
-    public Layout Layout { get; set; } 
+    public Layout Layout { get; set; }
 
     /// <summary>
     /// Custom type conversion from default string to other type

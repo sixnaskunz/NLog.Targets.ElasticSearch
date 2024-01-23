@@ -35,7 +35,7 @@ public class IntegrationTests
 
             if (hasExceptionFieldLayout)
             {
-                elasticTarget.Fields.Add(new Field
+                elasticTarget.Fields.Add(new Models.Field
                 {
                     Name = "exception",
                     Layout = Layout.FromString("${exception:format=toString,Data:maxInnerExceptionLevel=10}"),
