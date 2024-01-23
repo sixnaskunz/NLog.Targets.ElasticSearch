@@ -13,14 +13,14 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     private Layout _password;
     private Layout _apiKeyId;
     private Layout _apiKey;
-    private HashSet<string> _excludedProperties = new HashSet<string>(new[] { "CallerMemberName", "CallerFilePath", "CallerLineNumber", "MachineName", "ThreadId" });
+    private HashSet<string> _excludedProperties = new(["CallerMemberName", "CallerFilePath", "CallerLineNumber", "MachineName", "ThreadId"]);
     private JsonSerializer _jsonSerializer;
     private JsonSerializer _flatJsonSerializer;
     private readonly Lazy<JsonSerializerSettings> _jsonSerializerSettings;
     private readonly Lazy<JsonSerializerSettings> _flatSerializerSettings;
 
-    private JsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = JsonSerializer.CreateDefault(_jsonSerializerSettings.Value));
-    private JsonSerializer JsonSerializerFlat => _flatJsonSerializer ?? (_flatJsonSerializer = JsonSerializer.CreateDefault(_flatSerializerSettings.Value));
+    private JsonSerializer JsonSerializer => _jsonSerializer ??= JsonSerializer.CreateDefault(_jsonSerializerSettings.Value);
+    private JsonSerializer JsonSerializerFlat => _flatJsonSerializer ??= JsonSerializer.CreateDefault(_flatSerializerSettings.Value);
 
     private JsonLayout _documentInfoJsonLayout;
 
@@ -216,6 +216,8 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     /// </summary>
     public bool IncludeDefaultFields { get; set; } = true;
 
+    private static readonly char[] separator = [','];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticSearchTarget"/> class.
     /// </summary>
@@ -224,14 +226,14 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
         Name = "ElasticSearch";
         OptimizeBufferReuse = true;
 
-        ObjectTypeConverters = new List<ObjectTypeConvert>()
-        {
-            new ObjectTypeConvert(typeof(System.Reflection.Assembly)),     // Skip serializing all types in application
-            new ObjectTypeConvert(typeof(System.Reflection.Module)),       // Skip serializing all types in application
-            new ObjectTypeConvert(typeof(System.Reflection.MemberInfo)),   // Skip serializing all types in application
-            new ObjectTypeConvert(typeof(System.IO.Stream)),               // Skip serializing Stream properties, since they throw
-            new ObjectTypeConvert(typeof(System.Net.IPAddress)),           // Skip serializing IPAdress properties, since they throw when IPv6 address
-        };
+        ObjectTypeConverters =
+        [
+            new(typeof(System.Reflection.Assembly)),     // Skip serializing all types in application
+            new(typeof(System.Reflection.Module)),       // Skip serializing all types in application
+            new(typeof(System.Reflection.MemberInfo)),   // Skip serializing all types in application
+            new(typeof(System.IO.Stream)),               // Skip serializing Stream properties, since they throw
+            new(typeof(System.Net.IPAddress)),           // Skip serializing IPAdress properties, since they throw when IPv6 address
+        ];
 
         _jsonSerializerSettings = new Lazy<JsonSerializerSettings>(() => CreateJsonSerializerSettings(false, ObjectTypeConverters), LazyThreadSafetyMode.PublicationOnly);
         _flatSerializerSettings = new Lazy<JsonSerializerSettings>(() => CreateJsonSerializerSettings(true, ObjectTypeConverters), LazyThreadSafetyMode.PublicationOnly);
@@ -244,13 +246,13 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
 
         IConnectionPool connectionPool;
 
-        var eventInfo = LogEventInfo.CreateNullEvent();
-        var cloudId = _cloudId?.Render(eventInfo) ?? string.Empty;
+        LogEventInfo eventInfo = LogEventInfo.CreateNullEvent();
+        string cloudId = _cloudId?.Render(eventInfo) ?? string.Empty;
 
-        var username = _username?.Render(eventInfo) ?? string.Empty;
-        var password = _password?.Render(eventInfo) ?? string.Empty;
-        var apiKeyId = _apiKeyId?.Render(eventInfo) ?? string.Empty;
-        var apiKey = _apiKey?.Render(eventInfo) ?? string.Empty;
+        string username = _username?.Render(eventInfo) ?? string.Empty;
+        string password = _password?.Render(eventInfo) ?? string.Empty;
+        string apiKeyId = _apiKeyId?.Render(eventInfo) ?? string.Empty;
+        string apiKey = _apiKey?.Render(eventInfo) ?? string.Empty;
 
         if (!string.IsNullOrWhiteSpace(cloudId))
         {
@@ -265,12 +267,12 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
         }
         else
         {
-            var uri = _uri?.Render(eventInfo) ?? string.Empty;
-            var nodes = uri.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(url => new Uri(url));
+            string uri = _uri?.Render(eventInfo) ?? string.Empty;
+            IEnumerable<Uri> nodes = uri.Split(separator, StringSplitOptions.RemoveEmptyEntries).Select(url => new Uri(url));
             connectionPool = new StaticConnectionPool(nodes);
         }
 
-        var config = ElasticsearchSerializer == null
+        ConnectionConfiguration config = ElasticsearchSerializer == null
             ? new ConnectionConfiguration(connectionPool)
             : new ConnectionConfiguration(connectionPool, ElasticsearchSerializer);
 
@@ -310,14 +312,14 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
                 throw new InvalidOperationException($"Type {Proxy.Credentials.GetType().FullName} of proxy credentials isn't supported. Use {typeof(NetworkCredential).FullName} instead.");
             }
 
-            var credential = (NetworkCredential)Proxy.Credentials;
+            NetworkCredential credential = (NetworkCredential)Proxy.Credentials;
             config = config.Proxy(Proxy.Address, credential.UserName, credential.SecurePassword);
         }
         else if (ProxyAddress != null)
         {
-            var proxyAddress = ProxyAddress.Render(eventInfo);
-            var proxyUserName = ProxyUserName?.Render(eventInfo) ?? string.Empty;
-            var proxyPassword = ProxyPassword?.Render(eventInfo) ?? string.Empty;
+            string proxyAddress = ProxyAddress.Render(eventInfo);
+            string proxyUserName = ProxyUserName?.Render(eventInfo) ?? string.Empty;
+            string proxyPassword = ProxyPassword?.Render(eventInfo) ?? string.Empty;
             if (!string.IsNullOrEmpty(proxyAddress))
             {
                 config = config.Proxy(new Uri(proxyAddress), proxyUserName, proxyPassword);
@@ -333,7 +335,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
         _client = new ElasticLowLevelClient(config);
 
         if (!string.IsNullOrEmpty(ExcludedProperties))
-            _excludedProperties = new HashSet<string>(ExcludedProperties.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+            _excludedProperties = new HashSet<string>(ExcludedProperties.Split(separator, StringSplitOptions.RemoveEmptyEntries));
 
         if (EnableJsonLayout)
         {
@@ -361,7 +363,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     /// <inheritdoc />
     protected override void Write(AsyncLogEventInfo logEvent)
     {
-        SendBatch(new[] { logEvent });
+        SendBatch([logEvent]);
     }
 
     /// <inheritdoc />
@@ -374,18 +376,18 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     {
         try
         {
-            var payload = EnableJsonLayout ? FromPayloadWithJsonLayout(logEvents) : FormPayload(logEvents);
+            PostData payload = EnableJsonLayout ? FromPayloadWithJsonLayout(logEvents) : FormPayload(logEvents);
 
-            var result = _client.Bulk<BulkResponse>(payload);
+            BulkResponse result = _client.Bulk<BulkResponse>(payload);
 
-            var exception = result.ApiCall?.Success ?? false ? null : result.OriginalException ?? new Exception("No error message. Enable Trace logging for more information.");
+            Exception exception = result.ApiCall?.Success ?? false ? null : result.OriginalException ?? new Exception("No error message. Enable Trace logging for more information.");
 
             if (result.ServerError != null)
             {
                 InternalLogger.Error($"ElasticSearch: Server error: {result.ServerError}");
             }
 
-            foreach (var itemWithError in result.ItemsWithErrors)
+            foreach (BulkResponseItemBase itemWithError in result.ItemsWithErrors)
             {
                 InternalLogger.Error($"ElasticSearch: Bulk item failed: index:{itemWithError.Index} result:{itemWithError.Result} type:{itemWithError.Type} error:{itemWithError.Error}");
             }
@@ -400,7 +402,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
             }
             else if (InternalLogger.IsDebugEnabled)
             {
-                var warnings = result.ApiCall?.DeprecationWarnings;
+                IEnumerable<string> warnings = result.ApiCall?.DeprecationWarnings;
                 if (warnings != null && warnings.Any())
                 {
                     string warningInfo = string.Join(", ", result.ApiCall.DeprecationWarnings);
@@ -408,7 +410,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
                 }
             }
 
-            foreach (var ev in logEvents)
+            foreach (AsyncLogEventInfo ev in logEvents)
             {
                 ev.Continuation(exception);
             }
@@ -416,7 +418,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
         catch (Exception ex)
         {
             InternalLogger.Error(ex.FlattenToActualException(), "ElasticSearch: Error while sending log messages");
-            foreach (var ev in logEvents)
+            foreach (AsyncLogEventInfo ev in logEvents)
             {
                 ev.Continuation(ex);
             }
@@ -425,14 +427,14 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
 
     private PostData FromPayloadWithJsonLayout(ICollection<AsyncLogEventInfo> logEvents)
     {
-        var payload = new List<string>(logEvents.Count * 2);    // documentInfo + document
+        List<string> payload = new(logEvents.Count * 2);    // documentInfo + document
 
-        foreach (var ev in logEvents)
+        foreach (AsyncLogEventInfo ev in logEvents)
         {
-            var logEvent = ev.LogEvent;
+            LogEventInfo logEvent = ev.LogEvent;
 
-            var documentInfo = RenderLogEvent(_documentInfoJsonLayout, logEvent);
-            var document = RenderLogEvent(Layout, logEvent);
+            string documentInfo = RenderLogEvent(_documentInfoJsonLayout, logEvent);
+            string document = RenderLogEvent(Layout, logEvent);
 
             payload.Add(documentInfo);
             payload.Add(document);
@@ -443,18 +445,16 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
 
     private PostData FormPayload(ICollection<AsyncLogEventInfo> logEvents)
     {
-        var payload = new List<object>(logEvents.Count * 2);    // documentInfo + document
+        List<object> payload = new(logEvents.Count * 2);    // documentInfo + document
 
-        foreach (var ev in logEvents)
+        foreach (LogEventInfo logEvent in logEvents.Select(ev => ev.LogEvent))
         {
-            var logEvent = ev.LogEvent;
+            string index = RenderLogEvent(Index, logEvent).ToLowerInvariant();
+            string documentType = RenderLogEvent(DocumentType, logEvent);
+            string pipeLine = RenderLogEvent(Pipeline, logEvent);
 
-            var index = RenderLogEvent(Index, logEvent).ToLowerInvariant();
-            var documentType = RenderLogEvent(DocumentType, logEvent);
-            var pipeLine = RenderLogEvent(Pipeline, logEvent);
-
-            var documentInfo = GenerateDocumentInfo(OpCodeCreate, index, documentType, pipeLine);
-            var document = GenerateDocumentProperties(logEvent);
+            object documentInfo = GenerateDocumentInfo(OpCodeCreate, index, documentType, pipeLine);
+            Dictionary<string, object> document = GenerateDocumentProperties(logEvent);
 
             payload.Add(documentInfo);
             payload.Add(document);
@@ -465,7 +465,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
 
     private Dictionary<string, object> GenerateDocumentProperties(LogEventInfo logEvent)
     {
-        var document = new Dictionary<string, object>();
+        Dictionary<string, object> document = [];
 
         if (IncludeDefaultFields)
         {
@@ -474,9 +474,9 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
             document.Add("message", RenderLogEvent(Layout, logEvent));
         }
 
-        foreach (var field in Fields)
+        foreach (Field field in Fields)
         {
-            var renderedField = RenderLogEvent(field.Layout, logEvent);
+            string renderedField = RenderLogEvent(field.Layout, logEvent);
 
             if (string.IsNullOrWhiteSpace(renderedField))
                 continue;
@@ -492,19 +492,16 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
             }
         }
 
-        if (IncludeDefaultFields)
+        if (IncludeDefaultFields && logEvent.Exception != null && !document.ContainsKey("exception"))
         {
-            if (logEvent.Exception != null && !document.ContainsKey("exception"))
-            {
-                document.Add("exception", FormatValueSafe(logEvent.Exception, "exception"));
-            }
+            document.Add("exception", FormatValueSafe(logEvent.Exception, "exception"));
         }
 
         if (IncludeEventProperties && logEvent.HasProperties)
         {
-            foreach (var p in logEvent.Properties)
+            foreach (KeyValuePair<object, object> p in logEvent.Properties)
             {
-                var propertyKey = p.Key.ToString();
+                string propertyKey = p.Key.ToString();
                 if (_excludedProperties.Contains(propertyKey))
                     continue;
 
@@ -531,7 +528,9 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
                 if (opCodeCreate)
                     return new { create = new { _index = index } };
                 else
+                {
                     return new { index = new { _index = index } };
+                }
             }
             else
             {
@@ -564,7 +563,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     {
         try
         {
-            var jsonSerializer = (MaxRecursionLimit == 0 || MaxRecursionLimit == 1) ? JsonSerializerFlat : JsonSerializer;
+            JsonSerializer jsonSerializer = (MaxRecursionLimit == 0 || MaxRecursionLimit == 1) ? JsonSerializerFlat : JsonSerializer;
             return ObjectConverter.FormatValueSafe(value, MaxRecursionLimit, jsonSerializer);
         }
         catch (Exception ex)
@@ -578,11 +577,11 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
 
     private static JsonSerializerSettings CreateJsonSerializerSettings(bool specialPropertyResolver, IList<ObjectTypeConvert> objectTypeConverters)
     {
-        var jsonSerializerSettings = new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, NullValueHandling = NullValueHandling.Ignore, CheckAdditionalContent = true };
+        JsonSerializerSettings jsonSerializerSettings = new() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore, NullValueHandling = NullValueHandling.Ignore, CheckAdditionalContent = true };
         jsonSerializerSettings.Converters.Add(new StringEnumConverter());
-        foreach (var typeConverter in objectTypeConverters ?? Array.Empty<ObjectTypeConvert>())
+        foreach (ObjectTypeConvert typeConverter in objectTypeConverters ?? Array.Empty<ObjectTypeConvert>())
         {
-            var jsonConverter = typeConverter.JsonConverter;
+            JsonConverter jsonConverter = typeConverter.JsonConverter;
             if (jsonConverter != null)
                 jsonSerializerSettings.Converters.Add(jsonConverter);
             else

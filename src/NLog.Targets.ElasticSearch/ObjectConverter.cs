@@ -30,10 +30,10 @@ internal static class ObjectConverter
         return value;
     }
 
-    private static object FormatToExpandoObject(object value, JsonSerializer jsonSerializer)
+    private static ExpandoObject FormatToExpandoObject(object value, JsonSerializer jsonSerializer)
     {
         string field = SerializeToJson(value, jsonSerializer);
-        var expandoObject = field.ToExpandoObject(jsonSerializer);
+        ExpandoObject expandoObject = field.ToExpandoObject(jsonSerializer);
         if (value is Exception && expandoObject is IDictionary<string, object> dictionary)
         {
             dictionary["Type"] = value.GetType().ToString();
@@ -43,9 +43,9 @@ internal static class ObjectConverter
 
     private static string SerializeToJson(object value, JsonSerializer jsonSerializer)
     {
-        var sb = new System.Text.StringBuilder(256);
-        var sw = new System.IO.StringWriter(sb, System.Globalization.CultureInfo.InvariantCulture);
-        using (JsonTextWriter jsonWriter = new JsonTextWriter(sw))
+        System.Text.StringBuilder sb = new(256);
+        StringWriter sw = new(sb, System.Globalization.CultureInfo.InvariantCulture);
+        using (JsonTextWriter jsonWriter = new(sw))
         {
             jsonWriter.Formatting = jsonSerializer.Formatting;
             jsonSerializer.Serialize(jsonWriter, value, value.GetType());

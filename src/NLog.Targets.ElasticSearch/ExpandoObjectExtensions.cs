@@ -8,8 +8,8 @@ internal static class ExpandoObjectExtensions
     /// <returns>ExpandoObject</returns>
     public static ExpandoObject ReplaceDotInKeys(this ExpandoObject obj, bool alwaysCloneObject = true)
     {
-        var clone = alwaysCloneObject ? new ExpandoObject() : null;
-        foreach (var item in obj)
+        ExpandoObject clone = alwaysCloneObject ? new ExpandoObject() : null;
+        foreach (KeyValuePair<string, object> item in obj)
         {
             switch (item.Value)
             {

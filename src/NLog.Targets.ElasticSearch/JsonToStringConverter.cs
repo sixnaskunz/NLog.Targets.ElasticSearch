@@ -1,16 +1,10 @@
 ﻿namespace NLog.Targets.ElasticSearch;
 
-internal sealed class JsonToStringConverter : JsonConverter
+internal sealed class JsonToStringConverter(Type type) : JsonConverter
 {
-    private readonly Type _type;
 
     /// <inheritdoc />
     public override bool CanRead { get; } = false;
-
-    public JsonToStringConverter(Type type)
-    {
-        _type = type;
-    }
 
     /// <inheritdoc />
     public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
@@ -23,7 +17,7 @@ internal sealed class JsonToStringConverter : JsonConverter
         {
             // Convert into a JSON object, so it can be converted back to ExpandoObject
             writer.WriteStartObject();
-            writer.WritePropertyName(_type.Name);
+            writer.WritePropertyName(type.Name);
             writer.WriteValue(value.ToString());
             writer.WriteEndObject();
         }
@@ -38,6 +32,6 @@ internal sealed class JsonToStringConverter : JsonConverter
     /// <inheritdoc />
     public override bool CanConvert(Type objectType)
     {
-        return _type.IsAssignableFrom(objectType);
+        return type.IsAssignableFrom(objectType);
     }
 }

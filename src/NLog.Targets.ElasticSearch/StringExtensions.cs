@@ -4,33 +4,23 @@ internal static class StringExtensions
 {
     public static object ToSystemType(this string field, Type type, IFormatProvider formatProvider, JsonSerializer jsonSerializer)
     {
-        if (formatProvider == null)
-            formatProvider = CultureInfo.CurrentCulture;
+        formatProvider ??= CultureInfo.CurrentCulture;
 
-        switch (type.FullName)
+        return type.FullName switch
         {
-            case "System.Boolean":
-                return Convert.ToBoolean(field, formatProvider);
-            case "System.Double":
-                return Convert.ToDouble(field, formatProvider);
-            case "System.DateTime":
-                return Convert.ToDateTime(field, formatProvider);
-            case "System.Int32":
-                return Convert.ToInt32(field, formatProvider);
-            case "System.Int64":
-                return Convert.ToInt64(field, formatProvider);
-            case "System.Object":
-                return field.ToExpandoObject(jsonSerializer);
-            default:
-                return field;
-        }
+            "System.Boolean" => Convert.ToBoolean(field, formatProvider),
+            "System.Double" => Convert.ToDouble(field, formatProvider),
+            "System.DateTime" => Convert.ToDateTime(field, formatProvider),
+            "System.Int32" => Convert.ToInt32(field, formatProvider),
+            "System.Int64" => Convert.ToInt64(field, formatProvider),
+            "System.Object" => field.ToExpandoObject(jsonSerializer),
+            _ => field,
+        };
     }
 
     public static ExpandoObject ToExpandoObject(this string field, JsonSerializer jsonSerializer)
     {
-        using (var reader = new JsonTextReader(new StringReader(field)))
-        {
-            return ((ExpandoObject)jsonSerializer.Deserialize(reader, typeof(ExpandoObject))).ReplaceDotInKeys(alwaysCloneObject: false);
-        }
+        using JsonTextReader reader = new(new StringReader(field));
+        return ((ExpandoObject)jsonSerializer.Deserialize(reader, typeof(ExpandoObject))).ReplaceDotInKeys(alwaysCloneObject: false);
     }
 }
