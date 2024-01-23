@@ -224,7 +224,7 @@ public class ElasticSearchTarget : TargetWithLayout, IElasticSearchTarget
     public ElasticSearchTarget()
     {
         Name = "ElasticSearch";
-        OptimizeBufferReuse = true;
+        // OptimizeBufferReuse = true;
 
         ObjectTypeConverters =
         [

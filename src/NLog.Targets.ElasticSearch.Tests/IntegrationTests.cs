@@ -80,7 +80,8 @@ public class IntegrationTests(ITestOutputHelper testOutputHelper)
             Layout = new JsonLayout()
             {
                 MaxRecursionLimit = 10,
-                IncludeAllProperties = true,
+                // IncludeAllProperties = true,
+                IncludeEventProperties = true,
                 Attributes =
                 {
                     new JsonAttribute("timestamp", "${date:universaltime=true:format=o}"),
