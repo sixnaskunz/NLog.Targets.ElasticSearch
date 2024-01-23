@@ -1,56 +1,50 @@
-﻿using System;
-using System.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+﻿namespace NLog.Targets.ElasticSearch;
 
-namespace NLog.Targets.ElasticSearch
+/// <summary>
+/// Serializes all non-simple properties as object.ToString()
+/// </summary>
+internal sealed class FlatObjectContractResolver : DefaultContractResolver
 {
-    /// <summary>
-    /// Serializes all non-simple properties as object.ToString()
-    /// </summary>
-    internal sealed class FlatObjectContractResolver : DefaultContractResolver
+    private readonly FlatObjectConverter _flatObjectConverter = new FlatObjectConverter();
+
+    protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
     {
-        private readonly FlatObjectConverter _flatObjectConverter = new FlatObjectConverter();
+        var jsonProperty = base.CreateProperty(member, memberSerialization);
+        if (jsonProperty.Readable && !IsSimpleType(jsonProperty.PropertyType))
+            jsonProperty.Converter = _flatObjectConverter;
+        return jsonProperty;
+    }
 
-        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+    private static bool IsSimpleType(Type propertyType)
+    {
+        return propertyType != null && (Type.GetTypeCode(propertyType) != TypeCode.Object || propertyType.IsValueType);
+    }
+
+    private class FlatObjectConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType)
         {
-            var jsonProperty = base.CreateProperty(member, memberSerialization);
-            if (jsonProperty.Readable && !IsSimpleType(jsonProperty.PropertyType))
-                jsonProperty.Converter = _flatObjectConverter;
-            return jsonProperty;
+            return true;
         }
 
-        private static bool IsSimpleType(Type propertyType)
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            return propertyType != null && (Type.GetTypeCode(propertyType) != TypeCode.Object || propertyType.IsValueType);
+            return null;
         }
 
-        private class FlatObjectConverter : JsonConverter
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            public override bool CanConvert(Type objectType)
+            if (value == null)
             {
-                return true;
+                writer.WriteNull();
             }
-
-            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            else if (value is System.Collections.IEnumerable)
             {
-                return null;
+                writer.WriteNull();
             }
-
-            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            else
             {
-                if (value == null)
-                {
-                    writer.WriteNull();
-                }
-                else if (value is System.Collections.IEnumerable)
-                {
-                    writer.WriteNull();
-                }
-                else
-                {
-                    writer.WriteValue(value.ToString());
-                }
+                writer.WriteValue(value.ToString());
             }
         }
     }

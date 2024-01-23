@@ -1,78 +1,49 @@
-﻿using System;
-using NLog.Common;
-using NLog.Config;
-using NLog.Layouts;
-using Xunit;
-using Xunit.Abstractions;
+﻿namespace NLog.Targets.ElasticSearch.Tests;
 
-namespace NLog.Targets.ElasticSearch.Tests
+public class IntegrationTests
 {
-    public class IntegrationTests
+    private readonly ITestOutputHelper testOutputHelper;
+
+    public IntegrationTests(ITestOutputHelper testOutputHelper)
     {
-        private readonly ITestOutputHelper testOutputHelper;
+        this.testOutputHelper = testOutputHelper;
+    }
 
-        public IntegrationTests(ITestOutputHelper testOutputHelper)
+    public class BadLogException : Exception
+    {
+        public object[] BadArray { get; }
+        public System.Reflection.Assembly BadProperty => typeof(BadLogException).Assembly;
+        public object ExceptionalBadProperty => throw new System.NotSupportedException();
+
+        public BadLogException()
         {
-            this.testOutputHelper = testOutputHelper;
+            BadArray = new object[] { this };
         }
+    }
 
-        public class BadLogException : Exception
+    [Theory(Skip = "Integration")]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ExceptionSerializationTest(bool hasExceptionFieldLayout)
+    {
+        using (var testOutputTextWriter = new TestOutputTextWriter(testOutputHelper))
         {
-            public object[] BadArray { get; }
-            public System.Reflection.Assembly BadProperty => typeof(BadLogException).Assembly;
-            public object ExceptionalBadProperty => throw new System.NotSupportedException();
+            InternalLogger.LogWriter = testOutputTextWriter;
+            InternalLogger.LogLevel = LogLevel.Warn;
 
-            public BadLogException()
+            var elasticTarget = new ElasticSearchTarget();
+
+            if (hasExceptionFieldLayout)
             {
-                BadArray = new object[] { this };
-            }
-        }
-
-        [Theory(Skip = "Integration")]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void ExceptionSerializationTest(bool hasExceptionFieldLayout)
-        {
-            using (var testOutputTextWriter = new TestOutputTextWriter(testOutputHelper))
-            {
-                InternalLogger.LogWriter = testOutputTextWriter;
-                InternalLogger.LogLevel = LogLevel.Warn;
-
-                var elasticTarget = new ElasticSearchTarget();
-
-                if (hasExceptionFieldLayout)
+                elasticTarget.Fields.Add(new Field
                 {
-                    elasticTarget.Fields.Add(new Field
-                    {
-                        Name = "exception",
-                        Layout = Layout.FromString("${exception:format=toString,Data:maxInnerExceptionLevel=10}"),
-                        LayoutType = typeof(string)
-                    });
-                }
-
-                var rule = new LoggingRule("*", LogLevel.Info, elasticTarget);
-
-                var config = new LoggingConfiguration();
-                config.LoggingRules.Add(rule);
-
-                LogManager.ThrowExceptions = true;
-                LogManager.Configuration = config;
-
-                var logger = LogManager.GetLogger("Example");
-
-                logger.Error(new BadLogException(), "Boom");
-
-                LogManager.Flush();
+                    Name = "exception",
+                    Layout = Layout.FromString("${exception:format=toString,Data:maxInnerExceptionLevel=10}"),
+                    LayoutType = typeof(string)
+                });
             }
-        }
 
-        [Fact(Skip = "Integration")]
-        public void SimpleLogTest()
-        {
-            var elasticTarget = new ElasticSearchTarget();
-
-            var rule = new LoggingRule("*", elasticTarget);
-            rule.EnableLoggingForLevel(LogLevel.Info);
+            var rule = new LoggingRule("*", LogLevel.Info, elasticTarget);
 
             var config = new LoggingConfiguration();
             config.LoggingRules.Add(rule);
@@ -82,80 +53,101 @@ namespace NLog.Targets.ElasticSearch.Tests
 
             var logger = LogManager.GetLogger("Example");
 
-            logger.Info("Hello elasticsearch");
+            logger.Error(new BadLogException(), "Boom");
 
             LogManager.Flush();
         }
+    }
 
-        [Fact(Skip = "Integration")]
-        public void SimpleJsonLayoutTest()
+    [Fact(Skip = "Integration")]
+    public void SimpleLogTest()
+    {
+        var elasticTarget = new ElasticSearchTarget();
+
+        var rule = new LoggingRule("*", elasticTarget);
+        rule.EnableLoggingForLevel(LogLevel.Info);
+
+        var config = new LoggingConfiguration();
+        config.LoggingRules.Add(rule);
+
+        LogManager.ThrowExceptions = true;
+        LogManager.Configuration = config;
+
+        var logger = LogManager.GetLogger("Example");
+
+        logger.Info("Hello elasticsearch");
+
+        LogManager.Flush();
+    }
+
+    [Fact(Skip = "Integration")]
+    public void SimpleJsonLayoutTest()
+    {
+        var elasticTarget = new ElasticSearchTarget();
+        elasticTarget.EnableJsonLayout = true;
+        elasticTarget.Layout = new JsonLayout()
         {
-            var elasticTarget = new ElasticSearchTarget();
-            elasticTarget.EnableJsonLayout = true;
-            elasticTarget.Layout = new JsonLayout()
-            {
-                MaxRecursionLimit = 10,
-                IncludeAllProperties = true,
-                Attributes =
-                    {
-                        new JsonAttribute("timestamp", "${date:universaltime=true:format=o}"),
-                        new JsonAttribute("lvl", "${level}"),
-                        new JsonAttribute("msg", "${message}"),
-                        new JsonAttribute("logger", "${logger}"),
-                        new JsonAttribute("threadid", "${threadid}", false), // Skip quotes for integer-value
-                    }
-            };
+            MaxRecursionLimit = 10,
+            IncludeAllProperties = true,
+            Attributes =
+                {
+                    new JsonAttribute("timestamp", "${date:universaltime=true:format=o}"),
+                    new JsonAttribute("lvl", "${level}"),
+                    new JsonAttribute("msg", "${message}"),
+                    new JsonAttribute("logger", "${logger}"),
+                    new JsonAttribute("threadid", "${threadid}", false), // Skip quotes for integer-value
+                }
+        };
 
-            var rule = new LoggingRule("*", elasticTarget);
-            rule.EnableLoggingForLevel(LogLevel.Info);
+        var rule = new LoggingRule("*", elasticTarget);
+        rule.EnableLoggingForLevel(LogLevel.Info);
 
-            var config = new LoggingConfiguration();
-            config.LoggingRules.Add(rule);
+        var config = new LoggingConfiguration();
+        config.LoggingRules.Add(rule);
 
-            LogManager.ThrowExceptions = true;
-            LogManager.Configuration = config;
+        LogManager.ThrowExceptions = true;
+        LogManager.Configuration = config;
 
-            var logger = LogManager.GetLogger("Example");
+        var logger = LogManager.GetLogger("Example");
 
-            logger.Info("Hello elasticsearch");
+        logger.Info("Hello elasticsearch");
 
-            LogManager.Flush();
-        }
+        LogManager.Flush();
+    }
 
-        [Fact(Skip = "Integration")]
-        public void ExceptionTest()
-        {
-            var elasticTarget = new ElasticSearchTarget();
+    [Fact(Skip = "Integration")]
+    public void ExceptionTest()
+    {
+        var elasticTarget = new ElasticSearchTarget();
 
-            var rule = new LoggingRule("*", elasticTarget);
-            rule.EnableLoggingForLevel(LogLevel.Error);
+        var rule = new LoggingRule("*", elasticTarget);
+        rule.EnableLoggingForLevel(LogLevel.Error);
 
-            var config = new LoggingConfiguration();
-            config.LoggingRules.Add(rule);
+        var config = new LoggingConfiguration();
+        config.LoggingRules.Add(rule);
 
-            LogManager.ThrowExceptions = true;
-            LogManager.Configuration = config;
+        LogManager.ThrowExceptions = true;
+        LogManager.Configuration = config;
 
-            var logger = LogManager.GetLogger("Example");
+        var logger = LogManager.GetLogger("Example");
 
-            var exception = new ArgumentException("Some random error message");
+        var exception = new ArgumentException("Some random error message");
 
-            logger.Error(exception, "An exception occured");
+        logger.Error(exception, "An exception occured");
 
-            LogManager.Flush();
-        }
+        LogManager.Flush();
+    }
 
-        [Fact(Skip = "Integration")]
-        public void ReadFromConfigTest()
-        {
-            LogManager.ThrowExceptions = true;
-            LogManager.Configuration = new XmlLoggingConfiguration("NLog.Targets.ElasticSearch.Tests.dll.config");
+    [Fact(Skip = "Integration")]
+    public void ReadFromConfigTest()
+    {
+        LogManager.ThrowExceptions = true;
+        LogManager.Configuration = new XmlLoggingConfiguration("NLog.Targets.ElasticSearch.Tests.dll.config");
 
-            var logger = LogManager.GetLogger("Example");
+        var logger = LogManager.GetLogger("Example");
 
-            logger.Info("Hello elasticsearch");
+        logger.Info("Hello elasticsearch");
 
-            LogManager.Flush();
-        }
+        LogManager.Flush();
     }
 }
