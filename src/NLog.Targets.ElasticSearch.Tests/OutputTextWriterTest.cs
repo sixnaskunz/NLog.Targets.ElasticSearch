@@ -1,6 +1,6 @@
 ﻿namespace NLog.Targets.ElasticSearch.Tests;
 
-public class TestOutputTextWriter(ITestOutputHelper testOutputHelper) : TextWriter
+public class OutputTextWriterTest(ITestOutputHelper testOutputHelper) : TextWriter
 {
     private StringBuilder stringBuilder = new();
 

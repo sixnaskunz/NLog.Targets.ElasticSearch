@@ -14,12 +14,12 @@ public class IntegrationTests(ITestOutputHelper testOutputHelper)
         }
     }
 
-    [Theory(Skip = "Integration")]
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void ExceptionSerializationTest(bool hasExceptionFieldLayout)
     {
-        using TestOutputTextWriter testOutputTextWriter = new(testOutputHelper);
+        using OutputTextWriterTest testOutputTextWriter = new(testOutputHelper);
         InternalLogger.LogWriter = testOutputTextWriter;
         InternalLogger.LogLevel = LogLevel.Warn;
 
@@ -50,7 +50,7 @@ public class IntegrationTests(ITestOutputHelper testOutputHelper)
         LogManager.Flush();
     }
 
-    [Fact(Skip = "Integration")]
+    [Fact]
     public void SimpleLogTest()
     {
         ElasticSearchTarget elasticTarget = new();
@@ -71,7 +71,7 @@ public class IntegrationTests(ITestOutputHelper testOutputHelper)
         LogManager.Flush();
     }
 
-    [Fact(Skip = "Integration")]
+    [Fact]
     public void SimpleJsonLayoutTest()
     {
         ElasticSearchTarget elasticTarget = new()
@@ -109,7 +109,7 @@ public class IntegrationTests(ITestOutputHelper testOutputHelper)
         LogManager.Flush();
     }
 
-    [Fact(Skip = "Integration")]
+    [Fact]
     public void ExceptionTest()
     {
         ElasticSearchTarget elasticTarget = new();
@@ -132,7 +132,7 @@ public class IntegrationTests(ITestOutputHelper testOutputHelper)
         LogManager.Flush();
     }
 
-    [Fact(Skip = "Integration")]
+    [Fact]
     public void ReadFromConfigTest()
     {
         LogManager.ThrowExceptions = true;
